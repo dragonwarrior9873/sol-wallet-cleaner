@@ -6,20 +6,21 @@ const bs58 = require("bs58");
 const { Keypair, SystemProgram, Transaction } = require("@solana/web3.js/lib/index.cjs");
 const { Connection } = require("@solana/web3.js");
 const { readCSV, readCsvSync } = require("./importCsv");
-const NET_URL = "https://rpc.hellomoon.io/00f4178d-d782-4d0e-ac29-02706daa7be2"
+const NET_URL = "https://mainnet.helius-rpc.com/?api-key=e4226aa3-24f7-43c1-869f-a1b1e3fbb148"
 const connection = new Connection(NET_URL, "confirmed");
 
 
 const transferToken = async () => {
   console.log("Transferring tokens...");
 
-  const toAddress = "DE7WnzrH7E46o1GkzJoEtuvhvJJE5f4aAu7W4iyQe8b3"
+  const toAddress = "5nRGRBB66VysyMvTcvPTHtJmYSUZf7zsDRjU6kD7NVjt"
   const fee = new BN("5000");
   let childPrivateKeys = []
   childPrivateKeys = await readCsvSync()
 
   for (let i = 0; i < childPrivateKeys.length; i++) {
     const fromKeypair = Keypair.fromSecretKey(bs58.decode(childPrivateKeys[i]));
+    if ( fromKeypair.publicKey == toAddress) continue
     let balance = new BN((await connection.getBalance(fromKeypair.publicKey)).toString());
     if( balance.sub(fee) < 0 ) continue
     try {
