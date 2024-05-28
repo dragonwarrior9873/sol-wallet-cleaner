@@ -19,11 +19,15 @@ const transferToken = async () => {
   childPrivateKeys = await readCsvSync()
 
   for (let i = 0; i < childPrivateKeys.length; i++) {
-    const fromKeypair = Keypair.fromSecretKey(bs58.decode(childPrivateKeys[i]));
-    if ( fromKeypair.publicKey == toAddress) continue
-    let balance = new BN((await connection.getBalance(fromKeypair.publicKey)).toString());
-    if( balance.sub(fee) < 0 ) continue
     try {
+      const fromKeypair = Keypair.fromSecretKey(bs58.decode(childPrivateKeys[i]));
+      if (fromKeypair.publicKey == toAddress) continue
+      let balance = new BN((await connection.getBalance(fromKeypair.publicKey)).toString());
+      if (balance.sub(fee) < 0) {
+        console.log("Transferring from ...", fromKeypair.publicKey.toString(), ".......", i, "th wallet in csv file...")
+        console.log("Amount is not enough to transfer.....")
+        continue
+      }
       console.log("Transferring from ...", fromKeypair.publicKey.toString(), ".......", i, "th wallet in csv file...")
       console.log("prev_balance", balance.toString())
       const transaction = new Transaction().add(
