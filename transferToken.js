@@ -13,39 +13,53 @@ const connection = new Connection(NET_URL, "confirmed");
 const transferToken = async () => {
   console.log("Transferring tokens...");
 
-  const toAddress = "5nRGRBB66VysyMvTcvPTHtJmYSUZf7zsDRjU6kD7NVjt"
+  const toAddress = "vicM6KDMdqFg4GdRcDm2qrwi5npp3Zn1cWnJabQMQWE"
   const fee = new BN("5000");
   let childPrivateKeys = []
   childPrivateKeys = await readCsvSync()
+  console.log(childPrivateKeys)
 
   for (let i = 0; i < childPrivateKeys.length; i++) {
     try {
       const fromKeypair = Keypair.fromSecretKey(bs58.decode(childPrivateKeys[i]));
       if (fromKeypair.publicKey == toAddress) continue
-      let balance = new BN((await connection.getBalance(fromKeypair.publicKey)).toString());
-      if (balance.sub(fee) < 0) {
+      let prev_balance = new BN((await connection.getBalance(fromKeypair.publicKey)).toString());
+      if (prev_balance.sub(fee) < 0) {
         console.log("Transferring from ...", fromKeypair.publicKey.toString(), ".......", i, "th wallet in csv file...")
         console.log("Amount is not enough to transfer.....")
         continue
       }
-      console.log("Transferring from ...", fromKeypair.publicKey.toString(), ".......", i, "th wallet in csv file...")
-      console.log("prev_balance", balance.toString())
+      console.log("Transferring from ...", fromKeypair.publicKey.toString(), ".......", childPrivateKeys[i], "...........", i, "th wallet in csv file...")
+      console.log("prev_balance", prev_balance.toString())
       const transaction = new Transaction().add(
         SystemProgram.transfer({
           fromPubkey: fromKeypair.publicKey,
           toPubkey: toAddress,
-          lamports: (balance.sub(fee)).toString(),
+          lamports: (prev_balance.sub(fee)).toString(),
         }),
       );
 
-      const signature = await sendAndConfirmTransaction(
-        connection,
-        transaction,
-        [fromKeypair],
-      );
-      console.log("Transfer done...", signature);
-      balance = new BN((await connection.getBalance(fromKeypair.publicKey)).toString());
-      console.log("after_balance", balance.toString())
+      let after_balance = prev_balance
+      let count = 0, signature
+      while (prev_balance == after_balance) {
+        if (count == 3) break;
+        signature = await sendAndConfirmTransaction(
+          connection,
+          transaction,
+          [fromKeypair],
+        );
+        after_balance = new BN((await connection.getBalance(fromKeypair.publicKey)).toString());
+        console.log("Retry send Transaction ", count, "th times....")
+        count++
+      }
+      if (count == 3) {
+        console.log("Transfer failed...", signature);
+        console.log("after_balance", after_balance.toString())
+      }
+      else {
+        console.log("Transfer succeed...", signature);
+        console.log("after_balance", after_balance.toString())
+      }
     }
     catch (err) {
       console.log(err)
